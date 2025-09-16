@@ -1,7 +1,6 @@
 import { neon, neonConfig } from "@neondatabase/serverless";
 import type { Chat, ChatWithMessages, Message } from "../types";
 
-neonConfig.fetchConnectionCache = true; // optional but good in serverless
 const sql = neon(process.env.DATABASE_URL!);
 
 // CREATE
