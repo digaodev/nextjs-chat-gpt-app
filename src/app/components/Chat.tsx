@@ -4,19 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getCompletion } from "@/app/server-actions/getCompletion";
+import { useRouter } from "next/navigation";
 
 type Role = "user" | "assistant";
+
+// OPENAI expects a {role, content} shape
+// when calling openai.chat.completions.create
 interface Message {
   role: Role;
   content: string;
 }
 
-export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>([]);
+interface ChatProps {
+  id?: number | null;
+  messages?: Message[];
+}
+export default function Chat({
+  id = null,
+  messages: initialMessages = [],
+}: ChatProps) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const chatId = useRef<number | null>(null);
+  const chatId = useRef<number | null>(id);
   const listRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     // scroll to bottom when messages change
@@ -30,21 +42,28 @@ export default function Chat() {
     const text = message.trim();
     if (!text || sending) return;
 
-    const nextHistory: Message[] = [
-      ...messages,
-      { role: "user", content: text },
-    ];
-    setMessages(nextHistory); // optimistic
-    setMessage("");
     setSending(true);
 
     try {
+      const nextHistory: Message[] = [
+        ...messages,
+        { role: "user", content: text },
+      ];
+
       const completions = await getCompletion(chatId.current, nextHistory);
-      chatId.current = completions.id;
+
+      if (!chatId.current) {
+        // New chat: navigate to it, don't update local messages
+        router.push(`/chats/${completions.id}`);
+        router.refresh();
+        return;
+      }
+
+      // Existing chat: update messages optimistically
       setMessages(completions.messages); // server is source of truth
+      setMessage("");
+      chatId.current = completions.id;
     } catch (err) {
-      // roll back optimistic add on failure
-      setMessages(messages);
       console.error(err);
     } finally {
       setSending(false);
