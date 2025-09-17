@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getCompletion } from "@/app/server-actions/getCompletion";
 import { useRouter } from "next/navigation";
+import Transcript from "./Transcript";
 
 type Role = "user" | "assistant";
 
@@ -27,16 +28,7 @@ export default function Chat({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const chatId = useRef<number | null>(id);
-  const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    // scroll to bottom when messages change
-    listRef.current?.scrollTo({
-      top: listRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages]);
 
   const handleSendMessage = async () => {
     const text = message.trim();
@@ -72,26 +64,7 @@ export default function Chat({
 
   return (
     <div className="flex flex-col h-full">
-      <div ref={listRef} className="flex-1 overflow-auto pr-1">
-        {messages.map((m, i) => (
-          <div
-            key={`${m.role}-${i}`}
-            className={`mb-3 flex ${
-              m.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-[85%] rounded-md py-2 px-3 whitespace-pre-wrap ${
-                m.role === "user"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-900"
-              }`}
-            >
-              {m.content}
-            </div>
-          </div>
-        ))}
-      </div>
+      <Transcript messages={messages} truncate={false} />
 
       <div className="flex border-t border-t-gray-300 pt-3 mt-3">
         <Input

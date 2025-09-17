@@ -1,4 +1,4 @@
-import { neon, neonConfig } from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 import type { Chat, ChatWithMessages, Message } from "../types";
 
 const sql = neon(process.env.DATABASE_URL!);
