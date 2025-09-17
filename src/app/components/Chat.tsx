@@ -1,64 +1,103 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getCompletion } from "@/app/server-actions/getCompletion";
-import { useRouter } from "next/navigation";
+import { saveChatAction } from "@/app/server-actions/chatActions";
 import Transcript from "./Transcript";
-
-type Role = "user" | "assistant";
-
-// OPENAI expects a {role, content} shape
-// when calling openai.chat.completions.create
-interface Message {
-  role: Role;
-  content: string;
-}
+import type { Message } from "@/types";
 
 interface ChatProps {
   id?: number | null;
   messages?: Message[];
 }
+
 export default function Chat({
   id = null,
   messages: initialMessages = [],
 }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const chatId = useRef<number | null>(id);
   const router = useRouter();
 
-  const handleSendMessage = async () => {
-    const text = message.trim();
-    if (!text || sending) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
 
-    setSending(true);
+    const userMessage: Message = { role: "user", content: input.trim() };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInput("");
+    setIsLoading(true);
 
     try {
-      const nextHistory: Message[] = [
-        ...messages,
-        { role: "user", content: text },
-      ];
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: updatedMessages,
+        }),
+      });
 
-      const completions = await getCompletion(chatId.current, nextHistory);
-
-      if (!chatId.current) {
-        // New chat: navigate to it, don't update local messages
-        router.push(`/chats/${completions.id}`);
-        router.refresh();
-        return;
+      if (!response.ok) {
+        throw new Error("Failed to get response");
       }
 
-      // Existing chat: update messages optimistically
-      setMessages(completions.messages); // server is source of truth
-      setMessage("");
-      chatId.current = completions.id;
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No reader available");
+      }
+
+      let assistantContent = "";
+      const assistantMessage: Message = { role: "assistant", content: "" };
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+
+        if (chunk.trim()) {
+          assistantContent += chunk;
+
+          const updatedFinalMessages = [...updatedMessages, {
+            role: "assistant" as const,
+            content: assistantContent
+          }];
+          setMessages(updatedFinalMessages);
+        }
+      }
+
+      // Save chat after completion
+      try {
+        const finalMessagesWithAssistant = [...updatedMessages, {
+          role: "assistant" as const,
+          content: assistantContent
+        }];
+
+        const result = await saveChatAction(chatId.current, finalMessagesWithAssistant);
+
+        if (!chatId.current) {
+          chatId.current = result.id;
+          router.push(`/chats/${result.id}`);
+          router.refresh();
+        }
+      } catch (err) {
+        console.error("Error saving chat:", err);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error:", err);
+      setMessages(messages);
     } finally {
-      setSending(false);
+      setIsLoading(false);
     }
   };
 
@@ -66,28 +105,28 @@ export default function Chat({
     <div className="flex flex-col h-full">
       <Transcript messages={messages} truncate={false} />
 
-      <div className="flex border-t border-t-gray-300 pt-3 mt-3">
+      <form onSubmit={handleSubmit} className="flex border-t border-t-gray-300 pt-3 mt-3">
         <Input
           className="flex-grow text-lg"
           placeholder="Type your question…"
-          value={message}
-          disabled={sending}
-          onChange={(e) => setMessage(e.target.value)}
+          value={input}
+          disabled={isLoading}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              handleSendMessage();
+              handleSubmit(e);
             }
           }}
         />
         <Button
-          onClick={handleSendMessage}
+          type="submit"
           className="ml-3 text-lg"
-          disabled={sending}
+          disabled={isLoading}
         >
-          {sending ? "Sending…" : "Send"}
+          {isLoading ? "Sending…" : "Send"}
         </Button>
-      </div>
+      </form>
     </div>
   );
 }
