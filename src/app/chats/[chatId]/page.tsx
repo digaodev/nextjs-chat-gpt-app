@@ -11,8 +11,7 @@ interface ChatDetailProps {
 }
 export default async function ChatDetail(props: ChatDetailProps) {
   // https://nextjs.org/docs/messages/sync-dynamic-apis
-  const { params } = await props; // Await props to get params
-  const { chatId } = params;
+  const { chatId } = await props.params; // Await to get params
   const chatIdNumber = Number(chatId);
   const chat = await getChat(chatIdNumber);
   if (!chat) {

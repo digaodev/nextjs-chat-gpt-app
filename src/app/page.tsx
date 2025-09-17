@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 
-import { Separator } from "@/components/ui/separator";
+import { ServerSeparator } from "./components/ServerSeparator";
 import Chat from "./components/Chat";
 import PreviousChats from "./components/PreviousChats";
 import { Suspense } from "react";
@@ -18,7 +18,7 @@ export default async function Home() {
             <PreviousChats />
           </Suspense>
           <h4 className="mt-5 text-2xl font-bold">New Chat Session</h4>
-          <Separator className="my-5" />
+          <ServerSeparator className="my-5" />
           <Chat />
         </>
       )}

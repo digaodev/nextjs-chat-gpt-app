@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 
-import { Separator } from "@/components/ui/separator";
+import { ServerSeparator } from "./ServerSeparator";
 import { getChatsWithMessages } from "@/db/queries";
-import Transcript from "./Transcript";
+import ServerTranscript from "./ServerTranscript";
 
 function NoPreviousChats() {
   return (
@@ -38,12 +38,12 @@ export default async function PreviousChats() {
                   {chat.name}
                 </Link>
                 <div className="p-3">
-                  <Transcript messages={chat.messages.slice(0, 2)} />
+                  <ServerTranscript messages={chat.messages.slice(0, 2)} />
                 </div>
               </div>
             ))}
           </div>
-          <Separator className="mt-5" />
+          <ServerSeparator className="mt-5" />
         </>
       )}
 

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { neon } from "@neondatabase/serverless";
 import type { Chat, ChatWithMessages, Message } from "../types";
 
