@@ -22,8 +22,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  chats,
 }: Readonly<{
   children: React.ReactNode;
+  chats: React.ReactNode; // @chats parallel route
 }>) {
   return (
     <html lang="en">
@@ -43,8 +45,10 @@ export default function RootLayout({
               <UserButton />
             </div>
           </header>
-          <div className="flex flex-col md:flex-row">
-            <div className="flex-grow">{children}</div>
+
+          <div className="flex">
+            {chats}
+            <div className="flex-1">{children}</div>
           </div>
         </Providers>
       </body>
